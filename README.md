@@ -1,4 +1,4 @@
-# ACRA Experiment.
+# ACRA Experiment
 
 This repository contains the code and data used in the testing experiment of the ACRA algorithm. In particular it contains two jupyter notebooks:
 
