@@ -6,7 +6,7 @@ library(tidyr)
 library(dplyr)
 
 
-data = read.csv("results/2GWI-Enron.csv") ## use "results/2GWI-UCI.csv"
+data = read.csv("results/2GWI-Ling.csv") ## use "results/2GWI-UCI.csv"
                                           ## to read UCI results
                                           ## use "results/2GWI-Ling.csv"
                                           ## to read Ling results
@@ -40,7 +40,7 @@ data %>% group_by(idx,m) %>%
         nbc = mean(nbcFPR),
         nb = mean(nbFPR))
 
-#Get FPR
+#Get FNR
 fnr = function(yt, yr){
     sum(yr == 0 & yt == 1)/sum(yt == 1)
 }
