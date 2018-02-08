@@ -61,5 +61,5 @@ for i in range(it):
 
 df = pd.DataFrame(data=result,
                   columns = [ "idx","m","y", "ycSeqMCACRA", "yNbC","yNb" ])
-df.to_csv("result/2GWI-UCI.csv")
+df.to_csv("results/2GWI-UCI.csv")
 print("Done!")

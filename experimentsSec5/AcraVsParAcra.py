@@ -64,7 +64,7 @@ for i in range(it):
             
 df = pd.DataFrame(data=result,
                   columns = [ "idx","m","y","ycACRA", "ycParACRA", "ACRATime", "ParTime" ])
-df.to_csv("AcraVSAcraPar.csv")
+df.to_csv("results/AcraVSAcraPar.csv")
 print("Done!")
         
         
