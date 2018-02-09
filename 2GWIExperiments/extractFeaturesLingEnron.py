@@ -1,8 +1,3 @@
-"""
-This code contains auxiliar functions to reproduce the 2GWI experiment over the
-Enron and Ling Datasets in Section 5 of the paper
-"""
-
 import os
 import random
 import shutil
@@ -20,11 +15,13 @@ from sklearn.datasets import make_classification
 import time
 import codecs
 
-def cleanFolders(datasetDirectory):
+def cleanFolders(datasetDirectory,lingEnron):
 
     # check if dataset is empty and copy original emails from DatasetLing/EnronCopy to datasetDirectory
-    src = "DatasetLingCopy/" # LingSpam
-    #src = "DatasetEnronCopy/" # Enron
+    if (lingEnron==1):
+        src = "DatasetLingCopy/" # LingSpam
+    else:
+        src = "DatasetEnronCopy/" # Enron
     if os.listdir(datasetDirectory) == []:
         print("Copying emails from: ",src," to: ",datasetDirectory)
         src_files = os.listdir(src)
@@ -56,10 +53,10 @@ def cleanFolders(datasetDirectory):
                     os.unlink(file_path)
             except Exception as e:
                 print(e)
-
-def splitTrainAndTest(q):
+    
+def splitTrainAndTest(q,lingEnron):
     datasetDirectory = "Dataset/"
-    cleanFolders(datasetDirectory)
+    cleanFolders(datasetDirectory,lingEnron)
     numberOfFiles = next(os.walk(datasetDirectory))[2]
     numberOfFiles = len(numberOfFiles)
     # Set number of email to Test and Train depending division coeficient q
@@ -80,23 +77,25 @@ def splitTrainAndTest(q):
         randomFile = random.choice(os.listdir(datasetDirectory))
         os.rename(datasetDirectory+randomFile,"Train/"+randomFile)
 
-def make_Dictionary(train_dir,n):
+def make_Dictionary(train_dir,n,lingEnron):
     print("Creating dictionary...")
-    emails = [os.path.join(train_dir,f) for f in os.listdir(train_dir)]
-    all_words = []
+    emails = [os.path.join(train_dir,f) for f in os.listdir(train_dir)]    
+    all_words = []       
     for mail in emails:
-        with open(mail) as m: # lingspam emails
-        #with open(mail,encoding="ISO-8859-1") as m: # enron emails
+        #if lingEnron==1:
+        #    with open(mail) as m: # lingspam emails
+        #else:
+        with open(mail,encoding="ISO-8859-1") as m: # enron emails
             for i,line in enumerate(m):
                 if i == 2:  #Body of email is only 3rd line of text file
                     words = line.split()
                     all_words += words
-
+    
     dictionary = Counter(all_words)
     # Non-word removal
     list_to_remove = dictionary.keys()
     for item in list(list_to_remove):
-        if item.isalpha() == False:
+        if item.isalpha() == False: 
             del dictionary[item]
         elif len(item) == 1:
             del dictionary[item]
@@ -104,7 +103,7 @@ def make_Dictionary(train_dir,n):
     dictionary.append(str("SpamOrNot")) # we add this column to add the emails labels (it is not part of the dictionary)
     return dictionary
 
-def extract_features(mail_dir,dictionary,n):
+def extract_features(mail_dir,dictionary,n,lingEnron):
     print("Extracting features...")
     files = [os.path.join(mail_dir,fi) for fi in os.listdir(mail_dir)]
     n = n+1
@@ -112,48 +111,52 @@ def extract_features(mail_dir,dictionary,n):
     features_matrix = np.zeros((len(files),n),dtype=int)
     docID = 0;
     for fil in files:
-      with open(fil) as fi: # ling spam emails
-      #with open(fil,encoding="ISO-8859-1") as fi: # enron emails
-        str1 = fi.name
-        for i,line in enumerate(fi):
-          if i == 2:
-            words = line.split()
-            for word in words:
-              wordID = 0
-              for i,d in enumerate(dictionary):
-                if d[0] == word:
-                  wordID = i
-                  #features_matrix[docID,wordID] = words.count(word)
-                  features_matrix[docID,wordID] = 1.0
-                if i==len(dictionary)-1:
-                   c = i
-                   spamOrNot = str1.find("sp") # Lingspam (if email name contains sp label is 1.0)
-                   # spamOrNot = str1.find("spam") # Enron (if emails name contains spam label is 1.0)
-                   if int(spamOrNot)>int(1):
-                      features_matrix[docID,c] = 1.0
-        docID = docID + 1
+      #if lingEnron==1:  
+      #    with open(fil) as fi: # ling spam emails
+      #else:
+        with open(fil,encoding="ISO-8859-1") as fi: # enron emails
+            str1 = fi.name
+            for i,line in enumerate(fi):
+                if i == 2:
+                    words = line.split()
+                    for word in words:
+                        wordID = 0
+                        for i,d in enumerate(dictionary):
+                            if d[0] == word:
+                                wordID = i
+                                #features_matrix[docID,wordID] = words.count(word)
+                                features_matrix[docID,wordID] = 1.0                
+                            if i==len(dictionary)-1:
+                                c = i
+                                if lingEnron==1:
+                                    spamOrNot = str1.find("sp") # Lingspam (if email name contains sp label is 1.0)
+                                else:
+                                    spamOrNot = str1.find("spam") # Enron (if emails name contains spam label is 1.0)
+                                if int(spamOrNot)>int(1):
+                                    features_matrix[docID,c] = 1.0
+        docID = docID + 1     
     return features_matrix
 
-def getTrainAndTest(q,n):
-    splitTrainAndTest(q)
-
+def getTrainAndTest(q,n,lingEnron):
+    splitTrainAndTest(q,lingEnron)
+    
     # Create a dictionary of words with its frequency
     train_dir = 'Train'
     test_dir = 'Test'
-    dictionary = make_Dictionary(train_dir,n)
+    dictionary = make_Dictionary(train_dir,n,lingEnron)
     print(dictionary)
 
     # Prepare feature vectors per training mail and its labels
-    xTrain = extract_features(train_dir,dictionary,n)
+    xTrain = extract_features(train_dir,dictionary,n,lingEnron)
     print("x_train: ",xTrain, " shape: ", xTrain.shape)
     yTrain = xTrain[:,-1]
     print("y_train: ",yTrain, " shape: ",yTrain.shape)
     xTrain =  np.delete(xTrain,-1,axis=1)
 
-    xTest = extract_features(test_dir,dictionary,n)
+    xTest = extract_features(test_dir,dictionary,n,lingEnron)
     print("x_test: ",xTest, " shape: ", xTest.shape)
     yTest = xTest[:,-1]
     print("y_test: ",yTest, " shape: ", yTest.shape)
     xTest =  np.delete(xTest,-1,axis=1)
-
+    
     return xTrain, xTest, yTrain, yTest

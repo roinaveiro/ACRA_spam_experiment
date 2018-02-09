@@ -6,7 +6,7 @@ library(tidyr)
 library(dplyr)
 
 
-data = read.csv("results/2GWI-Ling.csv") ## use "results/2GWI-UCI.csv"
+data = read.csv("results/t2GWI-UCI.csv") ## use "results/2GWI-UCI.csv"
                                           ## to read UCI results
                                           ## use "results/2GWI-Ling.csv"
                                           ## to read Ling results

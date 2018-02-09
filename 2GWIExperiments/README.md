@@ -71,7 +71,7 @@ mkdir DatasetLingCopy
 # mkdir DatasetEnronCopy
 ```
 #### 3. Copy the Ling/Enron dataset emails into DatasetLingCopy/DatasetEnronCopy
-#### 4. Make sure to uncomment the parts in extractFeaturesLingEnron.py of each specific dataset Ling or Enron (default is for Ling).
+
 
 ## Running
 Configuration in 2GWI-LingEnron.py:
@@ -82,7 +82,7 @@ Configuration in 2GWI-LingEnron.py:
 * m: mc size
 * q: division ratio Test and Train set
 * nWords: number of words for dictionary
-
+* lingEnron: set to 1 to use Ling and 2 to use Enron (default: 1)
 ```
 python 2GWI-LingEnron.py
 ```
