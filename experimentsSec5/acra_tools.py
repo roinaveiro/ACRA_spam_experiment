@@ -25,7 +25,7 @@ import multiprocessing
 This function trains a raw Naive Bayes in a given training set. In particular, it calculates all relevant parameters such as likelihoods a apriori distributions. Its inputs are:
 
    * `X_train`: An array where each row is a given email, in the bag-of-words representation (1 if word present, 0 else).
-    
+
    * `y_train`: An array containing the labels of each email of `X_train` (1 if the email is spam, 0 if ham).
 
 This function returns an `sklearn.naive_bayes.BernoulliNB` object with all relevant information.
@@ -45,7 +45,7 @@ def priors(obj):
     return(np.exp(obj.class_log_prior_ ))
 
 """
-For a given instance (email) $X$ and given classifier `obj` (`sklearn.naive_bayes.BernoulliNB` object) , this function returns $p_C(X|y)p_C(y)$ for $y \in \lbrace 0, 1 \rbrace$. 
+For a given instance (email) $X$ and given classifier `obj` (`sklearn.naive_bayes.BernoulliNB` object) , this function returns $p_C(X|y)p_C(y)$ for $y \in \lbrace 0, 1 \rbrace$.
 In particular, it returns an array whose first element is $p_C(X|0)p_C(0)$ and the second $p_C(X|1)p_C(1)$.
 """
 
@@ -91,14 +91,14 @@ This function computes the set of possible originating instances of a given one,
 """
 
 def getXp(X, n):
-    
+
     def subs1(X):
         X = np.reshape(X, (1,-1))
         aux = np.ones( ( X.shape[1] , X.shape[1] ) )
         np.fill_diagonal(aux, 0)
         return( np.logical_and(X, aux).astype(int) )
-    
-    
+
+
     X = np.reshape(X, (1,-1))
     z = np.apply_along_axis(subs1, 1, X)
     z = z.reshape(z.shape[0]*z.shape[1], z.shape[2])
@@ -107,7 +107,7 @@ def getXp(X, n):
             break
         z = np.apply_along_axis(subs1, 1, z)
         z = z.reshape(z.shape[0]*z.shape[1], z.shape[2])
-        
+
     return(np.unique(np.insert(z, 0, X, 0), axis = 0))
 
 
@@ -123,27 +123,27 @@ The inputs are
 """
 
 def randut(yc,y,a):
-    
+
     d = len(a)
     # if y label is malicious and yc label is malicious
     if( (y == 1) and (yc == 1) ):
         Y = - np.random.gamma(shape = np.repeat(2500.0, d), scale = np.repeat(1.0/500.0, d))
-        
-    else:    
+
+    else:
         # if y label is malicious and yc label innocent
         if( (y == 1) and (yc == 0) ):
             Y = np.random.gamma(shape = np.repeat(2500.0, d), scale = np.repeat(1.0/500.0, d))
-        # if y label is innocent and yc label is malicious OR y label is innocent and yc label is innocent  
+        # if y label is innocent and yc label is malicious OR y label is innocent and yc label is innocent
         else:
             Y = np.repeat(yc*y, d)
-    
-    
+
+
     # Generate random cost of implementing attack
     B = a*np.random.uniform(high = 0.6, low = 0.4, size = 1)
-    
+
     # Risk proneness
     rho = np.random.uniform(high = 0.6, low = 0.4, size = 1)
-  
+
     return (np.exp( rho * (Y - B) ))
 
 
@@ -153,7 +153,7 @@ First we have to define some auxiliar functions, useful later.
 """
 
 """
-For a given set of instances this function computes the mean of the beta disttribution to be used later. 
+For a given set of instances this function computes the mean of the beta disttribution to be used later.
 The inputs are:
 * `X`: a 2D-array containing the set of instances.
 * `obj`: the classifier (`sklearn.naive_bayes.BernoulliNB` object).
@@ -161,14 +161,22 @@ The inputs are:
 It returns an array containing $r_a$ for each email.
 """
 
-def getRa(X, obj):
-    ra = obj.predict_proba(X)[:,1]
+
+def getRa2(X, obj, n):
+
+    def aux(Z, obj, n):
+        q = np.sum( np.apply_along_axis(lambda x: xposterior(x.reshape(1, -1), obj)[0,1],\
+                                        1, getXp(Z,1) ) )
+        return ( q / (q + xposterior(Z, obj)[0, 0]) )
+
+    ra = np.apply_along_axis( lambda x : aux(x.reshape(1 , -1), obj, n), 1, X)
     ra[ra==1.0] -= 0.0001
     return(ra)
 
 
 """
-For a given set of instances this function computes the mean of the beta disttribution to be used later (Alternative form). 
+For a given set of instances this function computes the mean of the beta disttribution to be used later
+(Alternative heuristic).
 The inputs are:
 * `X`: a 2D-array containing the set of instances.
 * `obj`: the classifier (`sklearn.naive_bayes.BernoulliNB` object).
@@ -178,17 +186,11 @@ It returns an array containing $r_a$ for each email.
 """
 
 
-def getRa2(X, obj, n):
-    
-    def aux(Z, obj, n):
-        q = np.sum( np.apply_along_axis(lambda x: xposterior(x.reshape(1, -1), obj)[0,1],\
-                                        1, getXp(Z,1) ) )
-        return ( q / (q + xposterior(Z, obj)[0, 0]) )
-    
-    ra = np.apply_along_axis( lambda x : aux(x.reshape(1 , -1), obj, n), 1, X) 
+def getRa(X, obj):
+    ra = obj.predict_proba(X)[:,1]
     ra[ra==1.0] -= 0.0001
     return(ra)
-    
+
 
 
 """
@@ -196,16 +198,16 @@ This function return the shape parameters of the beta distribution, for given se
 """
 
 def deltas(ra, var):
-   
+
     deltas = np.zeros((len(ra),2))
-    
+
     for i in range(len(ra)):
         s2 = var *ra[i]* min(ra[i] * (1.0 - ra[i]) / (1.0 + ra[i]) , \
                              (1.0 - ra[i])**2 / (2.0 - ra[i]))     ## proportion of maximum
                                                                 #variance of convex beta
         deltas[i][0] = ( ( 1.0 - ra[i] ) / s2 - 1.0 / ra[i]) * ra[i]**2
         deltas[i][1] = deltas[i][0] * ( 1.0/ra[i] - 1.0 )
- 
+
     return(deltas)
 
 """
@@ -213,12 +215,12 @@ For a given email $X$, this function computes $\mathcal{A}(X)$ under some attack
 """
 
 def getxax(X, n):
-    
+
     def add1(X):
         X = np.reshape(X, (1,-1))
         return( np.logical_or(X, np.identity(X.shape[1])).astype(int) )
-    
-    
+
+
     X = np.reshape(X, (1,-1))
     z = np.apply_along_axis(add1, 1, X)
     z = z.reshape(z.shape[0]*z.shape[1], z.shape[2])
@@ -227,10 +229,10 @@ def getxax(X, n):
             break
         z = np.apply_along_axis(add1, 1, z)
         z = z.reshape(z.shape[0]*z.shape[1], z.shape[2])
-        
+
     return(np.unique(np.insert(z, 0, X, 0), axis = 0))
 """
-For a given array `delta`, where `delta[0]` correspond to $\delta_1$ and `delta[1]` to $\delta_2$, this function generates one sample from the beta distribution for each pair of deltas. 
+For a given array `delta`, where `delta[0]` correspond to $\delta_1$ and `delta[1]` to $\delta_2$, this function generates one sample from the beta distribution for each pair of deltas.
 """
 
 def randprob(deltas):
@@ -244,27 +246,27 @@ def pxaxp(x, xp, obj, var, n, K = 1000):
 
     # First we compute the set of all a(x) for the given x, and store them in the array aX.
     aX = getxax(x, n)
-    
+
     # We store in ix, the index of the element of aX coinciding with xp, this is the index of the attack
     # conecting x with xp.
     ix = np.where(np.all(aX == xp, axis=1))[0]
-    
+
     # We compute de deltas of the instances in aX and store them in d
     #d = deltas(getRa2(aX, obj, n), var)
     d = deltas(getRa(aX, obj), var)
 
-    # We compute the distances between tha attacked instances (those in aX) and the original instance x 
+    # We compute the distances between tha attacked instances (those in aX) and the original instance x
     distances = np.sum(aX - x, axis=1)
-    
+
     # We start the simulation
     distribution = np.zeros( len(distances) ) #here we will store the number of times each attack is maximum
-                            
-    for i in range(K):                    
+
+    for i in range(K):
         PA = randprob(d)
-        psi = PA * randut(1,1,distances) + (1.0 - PA)* randut(0,1,distances) 
+        psi = PA * randut(1,1,distances) + (1.0 - PA)* randut(0,1,distances)
         distribution[np.argmax(psi)] += 1
-                            
-        
+
+
 
     return( sum(distribution[ix])/K )
 
@@ -283,7 +285,7 @@ def pxaxp(x, xp, obj, var, n, K = 1000):
 ################################################################################################################################
 
 """
-For a given email, given `sklearn.naive_bayes.BernoulliNB` classifier and given `var` this function returns the ACRA posteriors $p_C(X'|y)p_C(y)$ for $y \in \lbrace 0, 1 \rbrace$. 
+For a given email, given `sklearn.naive_bayes.BernoulliNB` classifier and given `var` this function returns the ACRA posteriors $p_C(X'|y)p_C(y)$ for $y \in \lbrace 0, 1 \rbrace$.
 In particular, it returns an array whose first element is $p_C(X'|0)p_C(0)$ and the second $p_C(X'|1)p_C(1)$.
 
 The inputs are
@@ -308,7 +310,7 @@ The same for multiple instances, parallelizing the code
 
 def posteriorInput(i,Xp,obj,var,n):
         return ACRAposterior(Xp[[i],:],obj,var,n)
-    
+
 def ACRAparPosterior(Xp, obj, var, n):
     inputs = range(Xp.shape[0])
     num_cores = multiprocessing.cpu_count()
@@ -316,9 +318,9 @@ def ACRAparPosterior(Xp, obj, var, n):
     return(np.array(result))
 
 def ACRAlabel(posterior, ut):
-    
+
     aux = np.dot(ut, posterior.transpose())
-        
+
     return(np.argmax(aux, axis = 0))
 
 """
@@ -340,13 +342,13 @@ def ACRA(Xp, obj, ut, var, n):
 def seqACRA(Xp,obj, ut, var, n):
     t = (ut[0,0] - ut[1,0]) * xposterior(Xp, obj)[0,0] / (ut[1,1] - ut[0,1])
     aux = getXp(Xp, n)
-    
+
     sum = 0
     for i in range(aux.shape[0]):
         sum += pxaxp(aux[[i],:],Xp,obj,var,n)*xposterior(aux[[i],:], obj)[0,1]
         if sum > t:
             return(1)
-        
+
     return(0)
 
 ################################################################################################################################
@@ -370,16 +372,16 @@ This function computes a set of size m of possible originating instances of a gi
 
 def getRedXp(XX, obj, n, m):
     p = xposterior(XX, obj)[:,1]
-    K = np.sum(p) 
+    K = np.sum(p)
     p = p/K
     m = int(np.ceil(XX.shape[0]*m))
     return( XX[np.random.choice(XX.shape[0], m, replace=False, p=p.tolist())], K )
 
 
 def seqMCACRA(Xp, obj, ut, var, n, m):
-    
+
     aux = getXp(Xp, n)
-    t = (ut[0,0] - ut[1,0]) * xposterior(Xp, obj)[0,0] /  (ut[1,1] - ut[0,1]) #* np.exp(obj.class_log_prior_)[1] 		
+    t = (ut[0,0] - ut[1,0]) * xposterior(Xp, obj)[0,0] /  (ut[1,1] - ut[0,1]) #* np.exp(obj.class_log_prior_)[1]
     aux, K = getRedXp(aux, obj, n, m)
 
     I = K * pxaxp(aux[[0],:],Xp,obj,var,n)
@@ -408,7 +410,7 @@ def seqMCACRA(Xp, obj, ut, var, n, m):
 
 def sumInput(i,X,Xp,obj,var,n):
         return pxaxp(X[[i],:],Xp,obj,var,n)
-    
+
 def parSum(X, Xp, obj, var, n):
     inputs = range(X.shape[0])
     num_cores = multiprocessing.cpu_count()
@@ -416,16 +418,16 @@ def parSum(X, Xp, obj, var, n):
     return(np.sum( np.array(result) ) )
 
 def MCParACRA(Xp, obj, ut, var, n, m):
-    
-    t = (ut[0,0] - ut[1,0]) * xposterior(Xp, obj)[0,0] /  (ut[1,1] - ut[0,1]) #* np.exp(obj.class_log_prior_)[1] 
+
+    t = (ut[0,0] - ut[1,0]) * xposterior(Xp, obj)[0,0] /  (ut[1,1] - ut[0,1]) #* np.exp(obj.class_log_prior_)[1]
     aux = getXp(Xp, n)
     aux, K = getRedXp(aux, obj, n, m)
 
     I_par = K * parSum(aux, Xp, obj, var, n) / aux.shape[0]
-         
+
     if I_par > t:
         return(1)
-    else: 
+    else:
         return(0)
 
 ################################################################################################################################
@@ -433,8 +435,8 @@ def MCParACRA(Xp, obj, ut, var, n, m):
 ################################################################################################################################
 ################################################################################################################################
 
-    
-    
+
+
 ################################################################################################################################
 ################################################################################################################################
 ############## PRUEBAS DE FUNCIONAMIENTO  ######################################################################################
@@ -443,33 +445,33 @@ def MCParACRA(Xp, obj, ut, var, n, m):
 
 
 def idiotACRA(Xp, obj, ut, var, n, m = 1):
-    
+
     aux = getXp(Xp, n)
- 
-    t = (ut[0,0] - ut[1,0]) * xposterior(Xp, obj)[0,0] /  (ut[1,1] - ut[0,1]) #* np.exp(obj.class_log_prior_)[1] 
+
+    t = (ut[0,0] - ut[1,0]) * xposterior(Xp, obj)[0,0] /  (ut[1,1] - ut[0,1]) #* np.exp(obj.class_log_prior_)[1]
 
     aux, K = getRedXp(aux, obj, n, m)
-    
+
     if K * pxaxp(aux[[0],:],Xp,obj,var,n) > t:
         return(1)
     else:
         return(0)
-    
-    
+
+
 def simpleACRA(Xp, obj, ut, var, n, m = 1):
-    
+
     aux = getXp(Xp, n)
- 
-    t = (ut[0,0] - ut[1,0]) * xposterior(Xp, obj)[0,0] /  (ut[1,1] - ut[0,1]) #* np.exp(obj.class_log_prior_)[1] 
+
+    t = (ut[0,0] - ut[1,0]) * xposterior(Xp, obj)[0,0] /  (ut[1,1] - ut[0,1]) #* np.exp(obj.class_log_prior_)[1]
 
     aux, K = getRedXp(aux, obj, n, m)
-    
+
     if xposterior(aux, obj)[0,1] > t:
         return(1)
     else:
-        return(0)    
-        
-    
+        return(0)
+
+
 ################################################################################################################################
 ################################################################################################################################
 ################################################################################################################################
@@ -484,7 +486,7 @@ def simpleACRA(Xp, obj, ut, var, n, m = 1):
 """
 ## Attacker simulation
 
-In order to test ACRA algorithm, we need to get an attacked test set. As long as there are no benchmarks for that purpose, we will generate it artificially by simulating the attacker's behaviour. 
+In order to test ACRA algorithm, we need to get an attacked test set. As long as there are no benchmarks for that purpose, we will generate it artificially by simulating the attacker's behaviour.
 
 At a first stage, we can simulate the attacker using the same assumptions we use to solve the classifier problem, but removing the uncertainty that is not present from the attackers point of view. Therefore, the attacker will not change ham emails. For spam email he will solve
 
@@ -500,27 +502,27 @@ $p_{a(x)}^A$ will be the probability given by the naive Bayes classifier.
 
 """
 def adversarialUt(yc,y,a):
-    
+
     d = len(a)
     # if y label is malicious and yc label is malicious
     if( (y == 1) and (yc == 1) ):
         Y = np.repeat(-5.0, d)
-        
-    else:    
+
+    else:
         # if y label is malicious and yc label innocent
         if( (y == 1) and (yc == 0) ):
             Y = np.repeat(5.0, d)
-        # if y label is innocent and yc label is malicious OR y label is innocent and yc label is innocent  
+        # if y label is innocent and yc label is malicious OR y label is innocent and yc label is innocent
         else:
             Y = np.repeat(0.0, d)
-    
-    
+
+
     # Generate random cost of implementing attack
     B = a*np.repeat(0.5, d)
-    
+
     # Risk proneness
     rho = np.repeat(0.5, d)
-  
+
     return (np.exp( rho * (Y - B) ))
 
 """
@@ -534,9 +536,9 @@ def sc_attackit(X, y, obj, n):
         possibleAttacks = getxax(X, n)
         pr = getRa(possibleAttacks, obj)
         distances = np.sum(possibleAttacks - X, axis=1)
-        psi = pr * adversarialUt(1,1,distances) + (1.0 - pr)* adversarialUt(0,1,distances) 
+        psi = pr * adversarialUt(1,1,distances) + (1.0 - pr)* adversarialUt(0,1,distances)
         return(possibleAttacks[np.argmax(psi),:])
-    
+
 
 def sc_attack(X, y, obj, n):
     att = np.zeros(X.shape, dtype=int)
@@ -557,9 +559,9 @@ def attackit(X, y, obj, n):
         possibleAttacks = getxax(X, n)
         pr = getRa2(possibleAttacks, obj,n)
         distances = np.sum(possibleAttacks - X, axis=1)
-        psi = pr * adversarialUt(1,1,distances) + (1.0 - pr)* adversarialUt(0,1,distances) 
+        psi = pr * adversarialUt(1,1,distances) + (1.0 - pr)* adversarialUt(0,1,distances)
         return(possibleAttacks[np.argmax(psi),:])
-    
+
 
 def attack(X, y, obj, n):
     att = np.zeros(X.shape, dtype=int)
@@ -584,7 +586,7 @@ def ign_attackit(X, y, n):
             else:
                 break
         return(Z)
-    
+
 
 def ign_attack(X, y, n):
     att = np.zeros(X.shape, dtype=int)
@@ -609,8 +611,8 @@ Write dataframe to csv
 """
 
 def write_to_csv(name, NBC_post, ACRA_post, NB_post, y_test):
-   
-    cols = ["None"]*7 
+
+    cols = ["None"]*7
     cols[ 0 ] = "NBCpost0"
     cols[ 1 ] = "NBCpost1"
     cols[ 2 ] = "ACRApost0"
@@ -625,6 +627,6 @@ def write_to_csv(name, NBC_post, ACRA_post, NB_post, y_test):
     for i in range(y_test.shape[0]):
         bigResult.loc[i] = list(np.concatenate( (NBC_post[i,:], ACRA_post[i,:], \
                                                  NB_post[i,:],y_test[[i]]) , axis = 0))
-       
+
 
     bigResult.to_csv(name)
