@@ -1,6 +1,7 @@
 # ACRA Experiment
 
-This repository contains the code and data used in the testing experiments of the ACRA algorithm. In particular it contains three different folders:
+This repository contains the code and data necessary to reproduce the paper "Adversarial Classification: an Adversarial Risk Analysis approach".
+In particular it contains three different folders:
 
 * experimentSec3.4: This folder contains the code and data needed to reproduce the experiment on section 3.4 of the paper.
 
